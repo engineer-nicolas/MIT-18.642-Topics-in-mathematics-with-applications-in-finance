@@ -1,0 +1,120 @@
+---
+title: "Problem set 1"
+format: pdf
+editor: visual
+---
+
+# 18.642 Assignment 1 Fall 2024
+
+## P3
+
+### (c)
+
+If $X_0=1$ , i.e., $\vec{u_0} =(1,0)$ , the probability distribution of $X_t$ for t = 1, 2,..., 5 can be computed numerically using R:
+
+```{r}
+# Define the matrix A and the column matrix u0 
+A=matrix(c(.8,.3,.2,.7),byrow=TRUE, ncol=2)
+u0= as.matrix(c(1,0))
+# Compute u1 = A u0 
+u1 = A %*% u0 
+u1
+```
+
+```{r}
+# Compute u2 = A u1 
+u2=A %*% u1 
+u2 
+```
+
+```{r}
+# Use a loop to compute ut, for t=1,2,...,tmax 
+ut=u0 
+tmax=5 
+for (t in c(1:tmax)){ 
+  ut=A %*% ut 
+  if (t <= tmax){ 
+    cat("t= ",t,":\n") 
+    print(ut) 
+  } 
+} 
+```
+
+Increase the upper limit $tmax$ on $t$ to determine when $\vec{u_t}$ converges (numerically in R), i.e., $\vec{u_*}=\vec{u}_{tmax}$. Reset the value of $tmax$ and change the ‘if’ condition to ($t$ \> $tmax$ − 3) to demonstrate convergence.
+
+```{r}
+# Use a loop to compute ut, for t=1,2,...,tmax 
+ut=u0 
+tmax=24
+for (t in c(1:tmax)){ 
+  ut=A %*% ut 
+  if (t > tmax-3){ 
+    cat("t= ",t,":\n") 
+    print(ut) 
+  } 
+} 
+```
+
+Answer: The sequence $\vec{u}_t$ converges numerically in R at approximately $t = 23$, since for all $t \ge 23$, the values of $\vec{u}_t$ remain constant (up to numerical precision). Therefore, we can take $\vec{u}_* = \vec{u}_{23}$.
+
+### (d)
+
+Repeat part (c) if $X_0=2$ , i.e., $\vec{u_0} =(0,1)$. Does the (numerical) limit $\vec{u}_*$ of $\vec{u}_t$ converge to the same limit as part (c)?
+
+```{r}
+# Use a loop to compute ut, for t=1,2,...,tmax 
+ut=as.matrix(c(0,1))
+tmax=25
+for (t in c(1:tmax)){ 
+  ut=A %*% ut 
+  if (t > tmax-3){ 
+    cat("t= ",t,":\n") 
+    print(ut) 
+  } 
+} 
+```
+
+Answer: The numerical limit $\vec{u}_*$ of $\vec{u}_t$ does converge to the same limit as part (c).
+
+### (e)
+
+The limiting vector $\vec{u}_*$ in part (c) above is an eigen-vector of the matrix A corresponding to the eigen-value λ = 1. It corresponds to the *stationary* distribution – the distribution of $X_t$ for which the distributions of $X_{t+k}$ do not change for k \> 0. In the example of the Markov Chain for side of successive market orders in a stationary market, what is the stationary distribution of order side?
+
+Answer: The stationary distribution is $P[X_t=1]=0.6$ and $P[X_t=2]=0.4$ .
+
+The eigen-values/eigen vectors of A can be computed in R:
+
+```{r}
+A.eigen=eigen(A) 
+print(A.eigen)
+```
+
+```{r}
+A.eigen.value1=A.eigen$value[1] 
+A.eigen.vector1=as.matrix(A.eigen$vectors[,1]) 
+cat("A.eigen.value1=\n")
+print(A.eigen.value1)
+cat("A.eigen.vector1=\n")
+print(A.eigen.vector1)
+
+```
+
+```{r}
+# Demonstrate the property of eigenvector1 
+print(A %*% A.eigen.vector1)
+
+```
+
+```{r}
+print(A.eigen.value1 * A.eigen.vector1)
+# These are equal 
+```
+
+Explain the relationship between the limiting vector $\vec{u}_*$, an eigen-vector of A and the output of the R function eigen().
+
+Answer: The limiting vector $\vec{u}_*$ is an eigen-vector of the matrix A corresponding to the eigen-value λ = 1 such that the sum of its elements is equal to 1. Thus, if A.eigen.vector1 is divided by sum(A.eigen.vector1), we obtain the limiting vector:
+
+```{r}
+
+print(A.eigen.vector1/sum(A.eigen.vector1))
+```
