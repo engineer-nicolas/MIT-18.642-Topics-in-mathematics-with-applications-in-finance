@@ -1,0 +1,131 @@
+---
+title: "Assignment 5 - Fall 2024 - MIT 18.642"
+format: pdf
+editor: visual
+---
+
+# 18.642 Assignment 5 Fall 2024
+
+## P1
+
+Suppose ${W (t)}$ is a Brownian motion model with drift $µ ∈ R$ and volatility $σ$\> 0.
+
+### (b)
+
+Simulate the path of a Brownian Motion Process with the following properties:
+
+T = 1(year)
+
+µ =0.30
+
+σ =0.40
+
+m = 252 increments, i.e., ti = i × (T/m), i =1, 2,...,m
+
+Plot five simulated paths of the process (plotting just the process values at the time increments).
+
+Answer:
+
+We have that\
+$W(t)=\mu t + \sigma B(t)$ where $$B(t)$$ is the standard Brownian motion.
+
+```{r}
+# Set seed for reproducibility
+set.seed(10)
+
+# Parameters
+T <- 1                  # Time horizon (1 year)
+mu <- 0.30              # Drift
+sigma <- 0.40           # Volatility
+m <- 252                # Number of increments
+dt <- T / m             # Time step
+
+# Time grid
+time_grid <- seq(0, T, length.out = m + 1)
+
+# Number of simulated paths
+n_paths <- 5
+
+# Matrix to store paths (rows = time, columns = paths)
+W <- matrix(0, nrow = m + 1, ncol = n_paths)
+
+# Simulate paths
+for (j in 1:n_paths) {
+  
+  # Generate Brownian increments vector
+  dB <- rnorm(m, mean = 0, sd = sqrt(dt))
+  
+  # Construct standard Brownian motion vector
+  B <- c(0, cumsum(dB))
+  
+  # Add drift
+  W[, j] <- mu * time_grid + sigma * B
+}
+
+# Plot the paths
+matplot(time_grid, W, type = "l", lty = 1, lwd = 2,
+        xlab = "Time (years)", ylab = "W(t)",
+        main = "Simulated Brownian Motion with Drift (5 Paths)")
+
+# Add legend
+legend("topleft", legend = paste("Path", 1:n_paths),
+       col = 1:n_paths, lty = 1, lwd = 2)
+```
+
+## P2
+
+The stochastic process {$N(t)$,t ≥ 0}, is a Poisson process with intensity or jump-rate $λ$ if:\
+- For any $n$ times: $0 = t_0 <t_1 < ··· <t_n$, the increments $N(t_k)−N(t_{k−1})$ are independent, for $1 ≤ k ≤ n$.
+
+\- The distribution of $N(t) − N(s)$ is Poisson with (mean) parameter $λ(t − s)$, for all $0 ≤ s<t< ∞$.
+
+### (b)
+
+Simulate the path of a Poisson Process with the following properties:
+
+T = 1(year)
+
+λ = 24 (rate of 24 events per year)
+
+m = 252 increments, i.e., ti = i × (T/m), i = 1, 2,...,m
+
+Plot five simulated paths of the process (plotting just the process values at the time increments).
+
+```{r}
+# Set seed for reproducibility
+set.seed(10)
+
+# Parameters
+T <- 1                  # Time horizon (1 year)
+lambda <- 24            # Rate (events per year)
+m <- 252                # Number of increments
+dt <- T / m             # Time step
+
+# Time grid
+time_grid <- seq(0, T, length.out = m + 1)
+
+# Number of simulated paths
+n_paths <- 5
+
+# Matrix to store paths
+N <- matrix(0, nrow = m + 1, ncol = n_paths)
+
+# Simulate paths
+for (j in 1:n_paths) {
+  
+  # Generate Poisson increments
+  dN <- rpois(m, lambda * dt)
+  
+  # Construct Poisson process path
+  N[, j] <- c(0, cumsum(dN))
+}
+
+# Plot the paths
+matplot(time_grid, N, type = "s", lty = 1, lwd = 2,
+        xlab = "Time (years)", ylab = "N(t)",
+        main = "Simulated Poisson Process (5 Paths)")
+
+# Add legend
+legend("topleft", legend = paste("Path", 1:n_paths),
+       col = 1:n_paths, lty = 1, lwd = 2)
+```
