@@ -8,26 +8,25 @@ editor: visual
 
 ## P1
 
-Suppose ${W (t)}$ is a Brownian motion model with drift $µ ∈ R$ and volatility $σ$\> 0.
+Suppose ${W (t)}$ is a Brownian motion model with drift $\mu \in R$ and volatility $\sigma$\> 0.
 
 ### (b)
 
 Simulate the path of a Brownian Motion Process with the following properties:
 
-T = 1(year)
+$T$ = 1(year)
 
-µ =0.30
+$\mu$ = 0.30
 
-σ =0.40
+$\sigma$ = 0.40
 
-m = 252 increments, i.e., ti = i × (T/m), i =1, 2,...,m
+$m$ = 252 increments, i.e., $t_i = i × (T/m), i =1, 2,...,m.$
 
 Plot five simulated paths of the process (plotting just the process values at the time increments).
 
 Answer:
 
-We have that\
-$W(t)=\mu t + \sigma B(t)$ where $$B(t)$$ is the standard Brownian motion.
+We have that $W(t)=\mu t + \sigma B(t)$ where $B(t)$ is the standard Brownian motion.
 
 ```{r}
 # Set seed for reproducibility
@@ -69,12 +68,12 @@ matplot(time_grid, W, type = "l", lty = 1, lwd = 2,
 
 # Add legend
 legend("topleft", legend = paste("Path", 1:n_paths),
-       col = 1:n_paths, lty = 1, lwd = 2)
+       col = 1:n_paths, lty = 1, lwd = 2, cex = 0.7)
 ```
 
 ## P2
 
-The stochastic process {$N(t)$,t ≥ 0}, is a Poisson process with intensity or jump-rate $λ$ if:\
+The stochastic process {$N(t), t > 0$}, is a Poisson process with intensity or jump-rate $λ$ if:\
 - For any $n$ times: $0 = t_0 <t_1 < ··· <t_n$, the increments $N(t_k)−N(t_{k−1})$ are independent, for $1 ≤ k ≤ n$.
 
 \- The distribution of $N(t) − N(s)$ is Poisson with (mean) parameter $λ(t − s)$, for all $0 ≤ s<t< ∞$.
@@ -83,13 +82,15 @@ The stochastic process {$N(t)$,t ≥ 0}, is a Poisson process with intensity or 
 
 Simulate the path of a Poisson Process with the following properties:
 
-T = 1(year)
+$T$ = 1(year)
 
-λ = 24 (rate of 24 events per year)
+$\lambda$ = 24 (rate of 24 events per year)
 
-m = 252 increments, i.e., ti = i × (T/m), i = 1, 2,...,m
+$m$ = 252 increments, i.e., $t_i=(T/m), i = 1, 2,...,m.$
 
 Plot five simulated paths of the process (plotting just the process values at the time increments).
+
+Answer:
 
 ```{r}
 # Set seed for reproducibility
@@ -127,5 +128,5 @@ matplot(time_grid, N, type = "s", lty = 1, lwd = 2,
 
 # Add legend
 legend("topleft", legend = paste("Path", 1:n_paths),
-       col = 1:n_paths, lty = 1, lwd = 2)
+       col = 1:n_paths, lty = 1, lwd = 2, cex = 0.7)
 ```
