@@ -1,0 +1,76 @@
+---
+title: "Assignment 2 - Fall 2024 - MIT 18.642"
+format: pdf
+editor: visual
+---
+
+# 18.642 Assignment 2 Fall 2024
+
+## P2
+
+### (c)
+
+Suppose a stock has price $S_0$ at $t = 0$ and at time t (years) it has price $S_0×X$, where $X$ has lognormal distribution with parameters $µ = t×ln(1.15)$ and $σ = \sqrt{t}×ln(1.3)$. Find the mean and standard deviation of $X$ (the total return) for horizons t = 1/12, 3/12, 1 (years), i.e., corresponding to horizons of 1 month, 3 months and 1 year.
+
+Answer:
+
+```{r}
+# Loop over each time value
+for (t in c(1,3,12)){ 
+  cat("t=",t,"/12:\n") 
+  
+  # Parameters of the lognormal distribution
+  mu <- t * log(1.15)
+  sigma <- sqrt(t) * log(1.3)
+  
+  # Compute mean and variance of lognormal return
+  mean <- exp(mu + 0.5 * sigma^2)
+  stdev  <- (mean^2) * (exp(sigma^2) - 1)
+  
+  # Print results
+  cat(paste0("The mean of X for t = ", t, "/12 is ", mean, "\n"))
+  cat(paste0("The standard deviation of X for t = ", t, "/12 is ",stdev, "\n"))
+  
+} 
+```
+
+### (e)
+
+For the stock in part c) if $S_0$ = \$100 compute the expected payoff of the call option when T = 1/12 (1 month), T = 3/12 (3 months) and T = 1 (1 year) for two cases of the strike price:
+
+K = \$100 (an ‘At-The-Money’ Call)
+
+K = \$120 (an ‘Out-of-The-Money’ Call)
+
+Answer:
+
+```{r}
+S <- 100
+# Loop over each time value
+for (sp in c(100,120)){
+  cat("\nStrike price K=",sp,":\n")
+  
+  for (t in c(1,3,12)){ 
+    cat("t=",t,"/12:\n") 
+    
+    # Parameters of the lognormal distribution
+    mu <- t * log(1.15)
+    sigma <- sqrt(t) * log(1.3)
+    K<-sp/S
+    
+    # Compute mean and variance of lognormal return
+    mean <- exp(mu + 0.5 * sigma^2)
+    p_1 <- sigma + (mu-log(K))/sigma 
+    p_2 <- (mu-log(K))/sigma 
+    payoff <- S*(mean*pnorm(p_1)-K*pnorm(p_2))
+    # Print results
+    answer="The expected payoff of the call option when T = "
+    cat(paste0(answer, t, "/12 is ", payoff,"\n"))
+
+  }
+}
+```
+
+Comment on the impact of increasing the time to expiration of the call option.
+
+Answer: An increase in the time to expiration leads to a higher payoff and an increase in the strike price leads to a lower payoff.
