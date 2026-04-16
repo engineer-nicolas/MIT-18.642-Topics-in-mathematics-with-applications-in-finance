@@ -1,0 +1,269 @@
+---
+title: "One-Period Financial Models - MIT 18.642"
+editor: visual
+execute:
+  echo: true
+
+format:
+  pdf:
+    output-file: "mit18_642_f24_lec02_2 - R code One-Period Financial Models"
+    toc: true
+    number-sections: true
+    
+  html:
+    output-file: "mit18_642_f24_lec02_2 - R code One-Period Financial Models"
+    embed-resources: true
+    image-format: "png"
+    toc: true
+    toc-location: "left-body"
+    number-sections: true
+---
+
+::: {.content-visible when-format="pdf"}
+\newpage
+:::
+
+# Lecture 2 - MIT 18.642- One-Period Financial Models
+
+## Visualizing Assets/Portfolios with ggplot2
+
+```{r}
+# Define the row matrix of t=0 prices B_0 and S_0 
+A0=matrix(c(100,100),nrow=1,ncol=2) 
+# Add dimension names for rows and columns 
+dimnames(A0)<-list(c("Price_0"), c("Bond","Stock")) 
+A0
+```
+
+```{r}
+# Define the matrix of time T payoffs/prices for B_T and S_T 
+# where row 1 corresponds to state \omega=d and 
+#       row 2 corresponds to state \omega=u 
+#       column 1 corresponds to the Bond 
+#       column 2 corresponds to the Stock 
+A=cbind(as.matrix(c(103,103)), as.matrix(c(90,130))) 
+# Add dimension names 
+dimnames(A)<-list(c("Payoff_T_d","Payoff_T_u"),c("Bond","Stock")) 
+A 
+```
+
+```{r}
+# When using ggplot2, data are represented in data frames 
+is.data.frame(A) 
+```
+
+```{r}
+Atranspose.df<-data.frame(t(A)) 
+# Add Asset_name as a field in Atranspose.df 
+Atranspose.df$Asset_name<-dimnames(Atranspose.df)[[1]] 
+Atranspose.df 
+```
+
+```{r}
+library(ggplot2) 
+# Figure AA: Plot payoff vectors of Two Assets at t=T 
+#     Note: the function arrow() specifies the head of the arrows 
+g1 <- ggplot(data=Atranspose.df,aes(x=Payoff_T_d,
+                                    y=Payoff_T_u,
+                                    label=Asset_name,
+                                    color=Asset_name)) 
+g1 + 
+  geom_segment(aes(x=0,y=0,xend=Payoff_T_d,yend=Payoff_T_u),
+               linewidth=3,
+               arrow = arrow(length = unit(0.5, "cm"))) +
+  geom_text(aes(label=Asset_name), hjust=0.,vjust=1., nudge_x=5, nudge_y=7) +
+  xlim(-50,140) + 
+  ylim(-50,140) + 
+  ggtitle("Fig 1. Payoff_T Vectors of Two Assets") 
+```
+
+```{r}
+# Create a data frame of the portfolio weights vectors
+list.pi_S = seq(0, 1, 0.1)
+df.pivecs.1 <- data.frame(pi_B = 1 - list.pi_S, pi_S = list.pi_S)
+```
+
+```{r}
+# Create a data frame data.portfolios 
+# with rows corresponding to portfolio cases which contain variables
+#   pi_B  portfolio weights of B 
+#   pi_S  portfolio weight of S 
+#   Value_0  value/cost of portfolio at t=0 
+#   Payoff_T_u  payoff of portfolio at t=T for omega = u 
+#   Payoff_T_d  payoff of portfolio at t=T for omega = d 
+#   Profit_T_u  profit of portfolio at t=T for omega = u 
+#   Profit_T_d  profit of portfolio at t=T for omega = d
+
+for (i in 1:NROW(df.pivecs.1)){
+  pivec= as.numeric(df.pivecs.1[i,])
+  Value_0=sum(A0*pivec) 
+  Payoff_T_d=sum(A[1,]*pivec) 
+  Payoff_T_u=sum(A[2,]*pivec) 
+  Profit_T_d=Payoff_T_d-Value_0 
+  Profit_T_u=Payoff_T_u-Value_0 
+
+  new.data.portfolios <- data.frame(pi_B=pivec[1],
+                                    pi_S=pivec[2], 
+                                    Value_0=Value_0, 
+                                    Payoff_T_d=Payoff_T_d, 
+                                    Payoff_T_u=Payoff_T_u, 
+                                    Profit_T_d=Profit_T_d, 
+                                    Profit_T_u=Profit_T_u) 
+  if (i==1){ 
+    data.portfolios<-new.data.portfolios
+  } else {
+    data.portfolios<-rbind(data.portfolios, new.data.portfolios)
+  }
+}
+data.portfolios.1=data.portfolios 
+
+```
+
+```{r}
+# load library ggplot2 
+library(ggplot2) 
+data.portfolios.1$pi_S <-as.factor(data.portfolios.1$pi_S) 
+# Figure 2A: Plot payoffs as vectors 
+g1 <- ggplot(data=data.portfolios.1,aes(x=Payoff_T_d,y=Payoff_T_u)) 
+g2 <- g1 + geom_segment(aes(x=0,
+                            y=0,
+                            xend=Payoff_T_d,
+                            yend=Payoff_T_u,
+                            col=pi_S),
+                        linewidth=.5,
+                        arrow = arrow(length = unit(0.2, "cm"))) +
+  xlim(c(-140,140)) +
+  ylim(c(-140,140)) 
+g2 + ggtitle("Figure 2A. Payoff Vectors at t=T (as vectors)",
+             subtitle="Constraints: weights Pi_B + weights Pi_S = 1") 
+```
+
+```{r}
+# Figure 2B: Plot payoffs as points 
+g1 <- ggplot(data=data.portfolios.1,aes(x=Payoff_T_d,y=Payoff_T_u)) 
+g2 <- g1 +
+  geom_point(aes(col=pi_S),size=1) +
+  xlim(c(-140,140)) +
+  ylim(c(-140,140)) 
+g2 + ggtitle("Figure 2B. Payoff Vectors at t=T (as points)",
+             subtitle="Constraints: weights Pi_B + weights Pi_S = 1") 
+```
+
+## Portfolios with Linear Constraints on Weights
+
+Now, we consider different constraints on the portfolios by defining sets of portfolios satisfying certain constraints.
+
+```{r}
+# Write a function that creates a data frame with portfolio attributes 
+# and receives portfolio weights in rows of an input data frame
+  
+fcn.data.portfolios <- function(df.pivecs, A0, A) {
+  
+  # Ensure inputs are in the correct numeric format
+  # A0 should be a numeric vector (initial prices)
+  # A should be a numeric matrix (rows = final state, columns = assets)
+  A0 <- as.numeric(A0)
+  A  <- as.matrix(A)
+  
+  # Convert portfolio weights data frame to matrix
+  # Each row represents a portfolio (pi_B, pi_S)
+  W <- as.matrix(df.pivecs)
+  
+  # Check dimension consistency
+  # Number of assets must match
+  if (ncol(W) != length(A0) || ncol(W) != ncol(A)) {
+    stop("Dimension mismatch: check A0, A, and df.pivecs")
+  }
+  
+  # Compute initial portfolio value for all portfolios
+  # Each row: dot product between weights and initial prices
+  Value_0 <- as.vector(W %*% A0)
+  
+  # Compute payoffs in each state
+  # Row 1 of A = payoff in state d
+  # Row 2 of A = payoff in state u
+  Payoff_T_d <- as.vector(W %*% A[1, ])
+  Payoff_T_u <- as.vector(W %*% A[2, ])
+  
+  # Compute profits in each state
+  Profit_T_d <- Payoff_T_d - Value_0
+  Profit_T_u <- Payoff_T_u - Value_0
+  
+  # Build final data frame with all portfolio characteristics
+  data.portfolios <- data.frame(
+    pi_B = W[, 1],
+    pi_S = W[, 2],
+    Value_0 = Value_0,
+    Payoff_T_d = Payoff_T_d,
+    Payoff_T_u = Payoff_T_u,
+    Profit_T_d = Profit_T_d,
+    Profit_T_u = Profit_T_u
+  )
+  
+  # Return result
+  return(data.portfolios)
+}
+```
+
+## Portfolios that DON'T allow Short Selling
+
+```{r}
+# Create grid of all combinations
+df.pivecs.2 <- expand.grid(
+  pi_B = seq(0, 1, 0.1),
+  pi_S = seq(0, 1, 0.1)
+)
+
+head(df.pivecs.2)
+```
+
+```{r}
+data.portfolios.2<-fcn.data.portfolios(df.pivecs.2, A0, A) 
+# Figure 3: Plot payoffs as points for data.portfolios.2 
+g1 <- ggplot(data=data.portfolios.2,aes(x=Payoff_T_d,y=Payoff_T_u)) 
+g2 <- g1 +
+  geom_point(aes(col=Value_0),size=1) +
+  xlim(c(-140,250)) +
+  ylim(c(-140,250))
+# Note: the xlim and ylim values are set manually 
+subtitle <-"Constraints: 0 <= weights Pi_B , weights Pi_S <= 1"
+g2 + ggtitle("Figure 3. Payoff Vectors at t=T (as points)",
+             subtitle=subtitle) 
+```
+
+## Portfolios Allowing Shorting
+
+Now, we consider portfolios that allow shorting of either the Bond B or the stock S.
+
+```{r}
+# Consider df.pivecs that let's pi_B and pi_S range between -2 and 2 
+df.pivecs.3 <- expand.grid(
+  pi_B = seq(-2, 2, 0.1),
+  pi_S = seq(-2, 2, 0.1)
+)
+
+head(df.pivecs.3)
+```
+
+```{r}
+data.portfolios.3<-fcn.data.portfolios(df.pivecs.3, A0, A) 
+# Figure 4: Plot payoffs as points for data.portfolios.3 
+g1<-ggplot(data=data.portfolios.3,aes(x=Payoff_T_d,y=Payoff_T_u))
+
+g2<- g1 +
+  geom_point(aes(col=Value_0),size=1) +
+  scale_color_gradient2(
+    low = "red",     # valores negativos
+    mid = "white",    # valor 0
+    high = "blue",     # valores positivos
+    midpoint = 0
+  ) + 
+  xlim(c(-500,500)) +
+  ylim(c(-500,500))
+
+g2 + ggtitle("Figure 4. Payoff Vectors at t=T (as points)",
+             subtitle="Constraints: -2 <= weights Pi_B , weights Pi_S <= +2") 
+
+```
+
+Note that the zero-cost portfolios (in white) do not admit positive payoffs in both states (u and d); i.e., **there is no arbitrage.**
