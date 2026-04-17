@@ -1,0 +1,246 @@
+---
+title: "Regression Analysis - MIT 18.642"
+editor: visual
+execute:
+  echo: true
+
+format:
+  pdf:
+    output-file: "mit18_642_f24_lec06_1_2 - Regression analysis"
+    toc: true
+    number-sections: true
+    
+  html:
+    output-file: "mit18_642_f24_lec06_1_2 - Regression analysis"
+    embed-resources: true
+    image-format: "png"
+    toc: true
+    toc-location: "left-body"
+    number-sections: true
+---
+
+\newpage
+
+# Lecture 6 - MIT 18.642- Regression Analysis
+
+```{r, warning=FALSE, message=FALSE}
+# Load packages into R session (and install if necessary)
+
+# require() returns TRUE if the package is successfully loaded
+# and FALSE if it is not found.
+if (!require("faraway")) install.packages("faraway")
+if (!require("tidyverse")) install.packages("tidyverse")
+library(faraway)
+library(tidyverse)
+library(car)
+library(stats)
+library(MASS) # For studres()
+```
+
+## Load data set Prostate
+
+```{r}
+# Load the dataset into the environment 
+# Note: data() returns the dataset name,
+# the actual values are stored in the 'prostate' dataframe
+dataset_name <- data(prostate) 
+print(dataset_name)
+
+# Display the first 3 observations of the prostate dataframe
+print(head(prostate, 3))
+
+```
+
+\newpage
+
+## Variables:
+
+| Variable | Description |
+|:---|:---|
+| **lcavol** | log cancer volume |
+| **lweight** | log prostate weight |
+| **age** | in years |
+| **lbph** | log of the amount of benign prostatic hyperplasia |
+| **svi** | seminal vesicle invasion |
+| **lcp** | log of capsular penetration |
+| **gleason** | a numeric vector |
+| **pgg45** | percent of Gleason score 4 or 5 |
+| **lpsa** | response (log prostate specific antigen) |
+
+: Dataset Prostate (Library: faraway) {#tbl-prostate}
+
+```{r}
+round(apply(prostate,2,summary),digits=1)
+```
+
+```{r}
+round(cor(prostate[,1:8]),digits=1) 
+```
+
+```{r}
+pairs( prostate[,1:9], col="blue" ) 
+```
+
+## Regression on Original Covariates
+
+```{r}
+
+# Set a seed to ensure reproducibility
+set.seed(1) 
+
+# Create a data frame with a single column 
+# containing the row indices of the prostate dataset
+prostate_id <- data.frame(irow = 1:nrow(prostate)) 
+
+# Randomly select 75% of the indices to be used for the training set
+train_id <- slice_sample(prostate_id, prop = .75) 
+
+# Subset the original dataset to create the training set
+train <- prostate[train_id$irow, ] 
+
+# Create the test set by excluding training indices (using the negative sign)
+test <- prostate[-train_id$irow, ] 
+
+# Fit a linear regression model using all available predictors 
+# and summarize the results
+linear_regression <- lm(lpsa ~ ., data = train)
+summary(linear_regression)
+```
+
+## Regression on Standardized Covariates
+
+```{r}
+# Create a copy of the training set to avoid modifying the original data
+train0 <- train 
+
+# Center and scale the first 8 predictor variables (mean=0, SD=1)
+train0[, 1:8] <- scale(train[, 1:8]) 
+
+# Fit the linear model on scaled data and display the summary results
+summary(lm(lpsa ~ ., data = train0))
+```
+
+## R-squared
+
+```{r}
+fit <- lm(lpsa~., data=train0)
+fit.summary <- summary(fit) 
+names(fit.summary)
+```
+
+```{r}
+plot(fit$fitted.values,
+     train0$lpsa,
+     xlab="Fitted Value",
+     ylab="Observed Value (lpsa)", 
+     main=paste0(
+       c("Prostate Model",
+         "\nR-Squared =",
+         as.character(round(fit.summary$r.squared, digits=2))
+         ),
+       collapse = ""
+     )
+) 
+abline(lm(train0$lpsa ~ fit$fitted.values),col="blue",lwd=3) 
+```
+
+# Package MASS
+
+## studres() in Package MASS 
+
+```{r}
+# Compute studentized residuals for the model
+studentized_residuals <- studres(fit)
+# Plot histogram of studentized residuals with 25 bins
+hist(studentized_residuals, breaks = 25)
+```
+
+# Package car
+
+## qqPlot() in Package car
+
+```{r}
+# Create a Quantile-Quantile plot to check for normality
+Extreme_Residuals <- qqPlot(fit, col = "blue", col.lines = "red") 
+
+```
+
+The `qqPlot` function returns a **named integer vector** where the **values** represent the row positions of the most influential cases, and the **names** represent their corresponding row labels in the data set
+
+```{r}
+# Construct the message using the positions in the training set
+message <- paste0("The QQ-plot identifies the observations at training set",
+                  " positions:\n [",
+                  paste(as.numeric(Extreme_Residuals), collapse = ", "),
+                  "]\n as potential outliers.")
+
+# Print the final result
+cat(message)
+```
+
+```{r}
+# Option A: Using the labels (The safest way)
+outlier_data <- train0[names(Extreme_Residuals), ]
+print(outlier_data)
+
+# Option B: Using the values (Position in the training set)
+outlier_data_alt <- train0[Extreme_Residuals, ]
+print(outlier_data_alt)
+```
+
+## influencePlot() in Package car
+
+Unlike `qqPlot` (which only identifies points with extreme residuals), `influencePlot` is more rigorous because it looks for observations that meet any of the following conditions:
+
+-   **High Studentized Residuals (Outliers):** Observations where the model fails significantly to predict the response.
+
+-   **High Leverage:** Points with extreme values in the predictor variables ($X$) that have the potential to pull the regression line toward them.
+
+-   **High Global Impact (Cook's Distance):** Observations that, if removed, would substantially change the model's coefficients.
+
+```{r}
+# Store the influence diagnostics in a data frame
+influence_points <- influencePlot(lm(lpsa ~ ., data = train0))
+```
+
+```{r}
+# Display the coordinates and metrics of the most influential cases
+print(influence_points)
+
+```
+
+```{r}
+# To access the specific row names of these influential points
+influential_names <- rownames(influence_points)
+influential_names
+```
+
+## residualPlots() in Package car
+
+```{r}
+residualPlots(lm(lpsa~., data=train0),tests=TRUE,plot=FALSE) 
+```
+
+```{r}
+residualPlots(lm(lpsa~., data=train0),tests=FALSE,plot=TRUE)
+```
+
+## leveragePlots() in Package car
+
+```{r}
+leveragePlots(lm(lpsa~., data=train0)) 
+```
+
+# Package STATS
+
+## plot.lm() in STATS
+
+```{r}
+# The R function $plot.lm()$ generates a 2x2 display of plots 
+oldpar=par(no.readonly=TRUE) 
+layout(matrix(c(1,2,3,4),2,2)) # optional 4 graphs/page 
+plot(fit)
+par(oldpar,no.readonly=TRUE)  
+
+```
+
