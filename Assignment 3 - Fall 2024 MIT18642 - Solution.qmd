@@ -1,0 +1,47 @@
+---
+title: "Assignment 3 - Fall 2024 - MIT 18.642"
+editor: visual
+format:
+  pdf:
+    output-file: "Assignment 3 - Fall 2024 MIT18642 - Solution"
+  html:
+    output-file: "Assignment 3 - Fall 2024 MIT18642 - Solution"
+    embed-resources: true
+    image-format: "png"
+---
+
+# 18.642 Assignment 3 Fall 2024
+
+## Problem 4. Principal Components Analysis of Demeaned Yields Changes
+
+Consider the daily yield rate data for constant maturity US Treasury securities, taken from the Federal Reserve Economic Database (FRED); see case study on principal components analysis. To analyze changes in yields, the daily changes in yield, in basis point units (1 basis point (BP) = 0.01×1% ) were computed for the 9 securities.
+
+Two principal components analyses are conducted on the data for 2001-2005, the first using the sample covariance matrix and the second using the sample correlation matrix. The results are:
+
+4(a) Compare the loadings (eigen-vectors) of the frst principal component variable for the two cases. The loadings are all positive for the covariance case and all negative for the correlation case. Is the diference in sign meaningful? (Hint: consider the eigen-vector/value decomposition of the matrices; does the decomposition change if any eigen-vector is multiplied by −1?)
+
+Answer:
+
+4(b) The magnitudes of the loadings for the frst principal component has a larger range from smallest to largest for the covariance matrix case compared to the correlation matrix case. The loading on the least variable yield change (DGS3MO) is higher in magnitude for the correlation matrix case. Also, the loadings on the highly variable yield changes are lower in magnitude for correlation matrix case. Provide a logical explanation for why the range of magnitudes is larger for the covariance case. (Recall that the frst principal component variable is the normalized weighted average of the yield-change variables which has the highest variance (the normalized weights have sum-of squares equal to 1). For the covariance matrix case, the yield-change variables are the original variables while for the correlation matrix case, these yield-change variables have been scaled to have mean 0 and variance 1.)
+
+Answer:
+
+4(c) Provide an interpretation of the frst three principal component variables for the correlation matrix case. Compare these to an interpretation of those for the covariance matrix case.
+
+Answer:
+
+4(d) If the analysis objective is to model dynamics of the term-structure of interest rates across all tenors, argue why the principal components analysis of the correlation matrix might be preferred to that of the covariance matrix.
+
+Answer:
+
+4(e) Compute the Total Variance (sum of variances of principal components variables) for the correlation case of the PCA. Is this value an integer? If so, explain why.
+
+Answer:
+
+```{r}
+
+```
+
+```{r}
+
+```
