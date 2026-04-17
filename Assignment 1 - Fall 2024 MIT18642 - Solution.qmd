@@ -1,7 +1,10 @@
 ---
 title: "Assignment 1 - Fall 2024 - MIT 18.642"
-format: pdf
 editor: visual
+
+format:
+  pdf:
+    output-file: "Assignment 1 - Fall 2024 MIT18642 - Solution.pdf"
 ---
 
 # 18.642 Assignment 1 Fall 2024
@@ -10,7 +13,7 @@ editor: visual
 
 ### (c)
 
-If $X_0=1$ , i.e., $\vec{u_0} =(1,0)$ , the probability distribution of $X_t$ for t = 1, 2,..., 5 can be computed numerically using R:
+If $X_0=1$ , i.e., $\vec{u_0} =(1,0)$ , the probability distribution of $X_t$ for $t = 1, 2,..., 5$ can be computed numerically using R:
 
 ```{r}
 # Define the matrix A and the column matrix u0 
@@ -96,8 +99,7 @@ print(A.eigen)
 ```{r}
 A.eigen.value1=A.eigen$value[1] 
 A.eigen.vector1=as.matrix(A.eigen$vectors[,1]) 
-cat("A.eigen.value1=\n")
-print(A.eigen.value1)
+cat(paste0("A.eigen.value1=\n",A.eigen.value1,"\n"))
 cat("A.eigen.vector1=\n")
 print(A.eigen.vector1)
 
@@ -116,7 +118,7 @@ print(A.eigen.value1 * A.eigen.vector1)
 
 Explain the relationship between the limiting vector $\vec{u}_*$, an eigen-vector of A and the output of the R function eigen().
 
-Answer: The limiting vector $\vec{u}_*$ is an eigen-vector of the matrix A corresponding to the eigen-value λ = 1 such that the sum of its elements is equal to 1. Thus, if A.eigen.vector1 is divided by sum(A.eigen.vector1), we obtain the limiting vector:
+Answer: The limiting vector $\vec{u}_*$ is an eigen-vector of matrix A corresponding to the eigen-value $\lambda = 1$, such that the sum of its elements is equal to 1. Therefore, we obtain the limiting vector by dividing `A.eigen.vector1` by `sum(A.eigen.vector1)` :
 
 ```{r}
 
