@@ -1,0 +1,188 @@
+---
+editor: visual
+execute:
+  echo: true
+
+title: "Markov Chain Example - MIT 18.642"
+format:
+  pdf:
+    output-file: "mit18_642_f24_lec05_1 - R code MC_Example1"
+    toc: true
+    number-sections: true
+  html:
+    output-file: "mit18_642_f24_lec05_1 - R code MC_Example1"
+    embed-resources: true
+    image-format: "png"
+    toc: true
+    toc-location: "left-body"
+    number-sections: true
+---
+
+::: {.content-visible when-format="pdf"}
+\newpage
+:::
+
+# Lecture 5 - MIT 18.642 - Markov Chain Example
+
+## Load packages (and install if necessary)
+
+```{r, warning=FALSE, message=FALSE}
+
+library(quantmod)
+# Load package or Install if needed
+if (!requireNamespace("markovchain", quietly = TRUE)) {
+  install.packages("markovchain", repos = "https://cloud.r-project.org")
+}
+
+library(markovchain)
+library(diagram)
+library(tidyverse)
+library(tidyquant)
+# Load igraph package for graph analysis
+library(igraph)
+```
+
+## Load Apple stock data
+
+```{r}
+#1. Collect/load daily data on stock
+
+
+# Check if object AAPL does not exist in the environment
+if (!exists("AAPL")) {
+  
+  # Download AAPL stock data using tidyquant
+  AAPL <- tq_get("AAPL")
+  
+  # Save the AAPL object to an RData file
+  save(file = "mit18_642_f24_lec05_1 - MC_Example1_stockData.RData",
+       list = c("AAPL"))
+}
+
+# Load the AAPL object from the RData file
+load(file = "mit18_642_f24_lec05_1 - MC_Example1_stockData.RData")
+```
+
+## Plot stock price
+
+```{r}
+#2. Plot Data
+ggplot(AAPL,
+       aes(x=date,y=close)
+       ) +
+  geom_line() +
+  ggtitle("AAPL")
+```
+
+```{r}
+AAPL0 <- AAPL |> 
+  dplyr::filter(date >= as.Date("2020-01-01")) |> 
+  dplyr::filter(date <= as.Date("2024-08-31")) 
+str(AAPL0)
+```
+
+```{r}
+df.aapl <- data.frame(AAPL0)
+str(df.aapl)
+```
+
+## Markov Chain
+
+```{r}
+y <- df.aapl$close
+# Define difference in closing price and 2 lags
+ydiff.lag0 <- y-LAG(y)
+# LAG (dif)
+ydiff.lag1 <- LAG(ydiff.lag0)
+# LAG(LAG(dif))
+ydiff.lag2 <- LAG(ydiff.lag1)
+
+# 2-Day State Definition 
+statevec2DAY <- 10*(ydiff.lag1>0) + 1*(ydiff.lag0>0)
+length(statevec2DAY)
+
+# State Vector
+state2DAY <- as.character(statevec2DAY)
+state2DAY <- ifelse(statevec2DAY==11,"UU",state2DAY)
+state2DAY <- ifelse(statevec2DAY==10,"UD",state2DAY)
+state2DAY <- ifelse(statevec2DAY==01,"DU",state2DAY)
+state2DAY <- ifelse(statevec2DAY==00,"DD",state2DAY)
+table(state2DAY)
+
+```
+
+```{r}
+state2DAY <- factor(state2DAY,
+                    levels = c("DD","DU","UD","UU"),
+                    ordered = TRUE)
+
+df.aapl$state2DAY <- state2DAY
+
+df.aapl |>  
+  dplyr::filter(date >= as.Date("2024-05-01")) |>
+  ggplot(aes(x=date,y=state2DAY)) +
+  geom_point() +
+  geom_line(aes(x=date,y=as.numeric(state2DAY))) +
+  ggtitle(
+    paste0(
+    "Markov Chain: AAPL stock\n",
+    "State: UD = Up Day (t-1) and Down Day (t)"
+    )
+  )
+
+```
+
+## Build transition probability matrix
+
+```{r}
+# Create lagged version of the previous period state
+state2DAY.LAG1 <- LAG(as.numeric(state2DAY))
+
+# Build transition count matrix: rows = previous state, cols = current state
+nmat <- table(state2DAY.LAG1,state2DAY)
+
+# Align row names with column names for consistency
+dimnames(nmat)[[1]]<- dimnames(nmat)[[2]]
+# Display transition matrix
+nmat
+```
+
+```{r}
+# Normalize each row to obtain transition probabilities
+pmat <- diag((rowSums(nmat))^-1) %*% nmat
+
+# Align row names with column names for consistency
+dimnames(pmat)[[1]]<- dimnames(pmat)[[2]]
+
+# Display transition probability matrix rounded to 2 decimals
+print(round(pmat,digits = 2))
+```
+
+## Plot Markov Chain graph
+
+```{r}
+# Figure : Plot Markov Chain Graph
+mc <- as(pmat,"markovchain")
+
+plot(mc,main="Markov Chain: AAPL States")
+
+```
+
+```{r}
+# Convert Markov chain object to igraph object
+mathematica.igraph <- as(mc, "igraph")
+
+# Compute strongly connected components (modern igraph function)
+SCC <- components(mathematica.igraph, mode = "strong")
+
+# Assign a color to each vertex based on its component membership
+V(mathematica.igraph)$color <- rainbow(SCC$no)[SCC$membership]
+
+# Create list of vertex groups (one per strongly connected component)
+groups <- split(V(mathematica.igraph), SCC$membership)
+
+# Plot graph highlighting communicating classes
+plot(mathematica.igraph,
+     mark.groups = groups,
+     main = "Communicating classes:\n strongly connected components")
+```
