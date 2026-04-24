@@ -1,16 +1,26 @@
 ---
 title: "Assignment 5 - Fall 2024 - MIT 18.642"
-format: pdf
 editor: visual
+format:
+  pdf:
+    output-file: "Assignment 5 - Fall 2024 MIT18642 - Solution"
+    toc: true
+    number-sections: true
+  html:
+    output-file: "Assignment 5 - Fall 2024 MIT18642 - Solution"
+    toc: true
+    number-sections: true
+    embed-resources: true
+    image-format: "png"
 ---
 
-# 18.642 Assignment 5 Fall 2024
+\newpage
 
-## P1
+# Problem 1
 
 Suppose ${W (t)}$ is a Brownian motion model with drift $\mu \in R$ and volatility $\sigma$\> 0.
 
-### (b)
+## 1 (b)
 
 Simulate the path of a Brownian Motion Process with the following properties:
 
@@ -71,14 +81,14 @@ legend("topleft", legend = paste("Path", 1:n_paths),
        col = 1:n_paths, lty = 1, lwd = 2, cex = 0.7)
 ```
 
-## P2
+# Problem 2
 
 The stochastic process {$N(t), t > 0$}, is a Poisson process with intensity or jump-rate $λ$ if:\
 - For any $n$ times: $0 = t_0 <t_1 < ··· <t_n$, the increments $N(t_k)−N(t_{k−1})$ are independent, for $1 ≤ k ≤ n$.
 
 \- The distribution of $N(t) − N(s)$ is Poisson with (mean) parameter $λ(t − s)$, for all $0 ≤ s<t< ∞$.
 
-### (b)
+## 2 (b)
 
 Simulate the path of a Poisson Process with the following properties:
 
@@ -130,3 +140,61 @@ matplot(time_grid, N, type = "s", lty = 1, lwd = 2,
 legend("topleft", legend = paste("Path", 1:n_paths),
        col = 1:n_paths, lty = 1, lwd = 2, cex = 0.7)
 ```
+
+# Problem 3. Extreme Value Method for Estimating the Variance of the Rate of Return.
+
+## 3(a)
+
+Read the article Parkinson (1980).
+
+## 3(b)
+
+Explain the definition of the term $D_x$ in Section II.
+
+Answer:
+
+$D_x$ is the standard deviation of a displacement variable: $$
+D_x = \sqrt{\frac{1}{n} \sum_{i=1}^{n} (d_i - \bar{d})^2}
+$$ where $\bar{d} = \frac{1}{n} \sum_{i=1}^{n} d_i$ is the sample mean displacement.
+
+## 3(c)
+
+Explain the definition of the term $D_l$ in Section III.
+
+Answer:
+
+$D_l$ is the sample mean of the squared difference between the maximum and minimum values of x in the sample, multiplied by 0.361.
+
+3(d)
+
+Using the results of Section IV, explain why the improvement using $D_l$, as an estimate of V (in Section V) could be of particular importance in studies of the time and price dependence (if any) of V.
+
+Answer:
+
+# Problem 4. Volatility Case Studies
+
+## 4(a)
+
+Detail/comment on specifc results of the SP500 case study you con sider interesting/signifcant.
+
+## 4(b)
+
+Detail/comment on specifc results of the ARKK case study you con sider interesting/signifcant.
+
+## 4(c)
+
+Compare the results/fndings about volatility for ARKK versus the SP500.
+
+# Problem 5. Optional / Extra Credit
+
+## 5(a)
+
+Create the pdf fle of the case study.
+
+## 5(b)
+
+Detail/comment on specific results you consider interesting/significant.
+
+## 5(c)
+
+Compare the results/findings for your stock to those for the SP500 and ARKK.

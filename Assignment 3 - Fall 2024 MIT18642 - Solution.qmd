@@ -4,44 +4,260 @@ editor: visual
 format:
   pdf:
     output-file: "Assignment 3 - Fall 2024 MIT18642 - Solution"
+    toc: true
+    number-sections: true
   html:
     output-file: "Assignment 3 - Fall 2024 MIT18642 - Solution"
+    toc: true
+    number-sections: true
     embed-resources: true
     image-format: "png"
 ---
 
-# 18.642 Assignment 3 Fall 2024
+\newpage
 
-## Problem 4. Principal Components Analysis of Demeaned Yields Changes
+# Problem 4. Principal Components Analysis of Demeaned Yields Changes
 
-Consider the daily yield rate data for constant maturity US Treasury securities, taken from the Federal Reserve Economic Database (FRED); see case study on principal components analysis. To analyze changes in yields, the daily changes in yield, in basis point units (1 basis point (BP) = 0.01×1% ) were computed for the 9 securities.
+Consider the daily yield rate data for constant maturity US Treasury securities, taken from the Federal Reserve Economic Database (FRED). To analyze changes in yields, the daily changes in yield, in basis point units (1 basis point (BP) = 0.01×1% ) were computed for the 9 securities.
+
+```{r, warning = FALSE, message = FALSE}
+# Load required packages
+library(quantmod)
+library(zoo)
+library(xts)
+
+# Path to data file
+file_path <- "Assignment 3 - Fall 2024 MIT18642 - Problem 4 Yield Data.RData"
+
+# Check if file exists
+if (file.exists(file_path)) {
+  
+  # Load data if file is found
+  dbnames0 <- load(file = file_path)
+  cat("Yield Data loaded successfully.\n")
+  
+} else {
+  
+  # Execute code if file is missing
+  cat("Yield Data not found. Import Data from Federal Reserve.\n")
+  
+  # Federal Reserve Economic Database (FRED)
+  # Define FRED series
+  # DGS3MO      | 3-Month Treasury, constant maturity rate
+  # DGS6MO      | 6-Month Treasury, constant maturity rate
+  # DGS1        | 1-Year Treasury, constant maturity rate
+  # DGS2        | 2-Year Treasury, constant maturity rate
+  # DGS3        | 3-Year Treasury, constant maturity rate
+  # DGS5        | 5-Year Treasury, constant maturity rate
+  # DGS7        | 7-Year Treasury, constant maturity rate
+  # DGS10       | 10-Year Treasury, constant maturity rate
+  # DGS20       | 20-Year Treasury, constant maturity rate
+  
+  symbols <- c("DGS3MO","DGS6MO","DGS1","DGS2","DGS3",
+             "DGS5","DGS7","DGS10","DGS20")
+  
+  # Download data from FRED
+  getSymbols(symbols,
+             src = "FRED",
+             from = as.Date("2001-01-01"),
+             to   = as.Date("2005-12-31")
+             )
+  
+  # Merge into one object
+  data <- do.call(merge, mget(symbols))
+  
+  # Remove original objects
+  rm(list = symbols)
+  
+  # Rename columns to match tenors
+  colnames(data) <- c("3M","6M","1Y","2Y","3Y",
+                           "5Y","7Y","10Y","20Y")
+  
+  # Save workspace if you want
+  save(data, file = file_path)
+  
+}
+
+############# data #############
+# data contains Time series of Treasury yields:
+# observations between January 1, 2001 and December 31, 2005
+
+
+
+# Number of rows before removing rows with missing values
+n_before <- nrow(data)
+
+# Remove rows with missing values to ensure clean time series
+data <- na.omit(data)
+
+# Rows removed
+n_removed <- n_before - nrow(data)
+# Percentage removed
+pct_removed <- (n_removed / n_before) * 100
+
+# Print results
+cat("Rows removed due to missing values:", n_removed, "\n")
+cat("Fraction of rows removed due to missing values:",
+    round(pct_removed, 2),
+    "%\n"
+    )
+```
+
+```{r}
+# diff() computes changes between consecutive observations
+data.yield_change <- diff(data)
+
+# diff() always introduces an NA in the first row
+data.yield_change <- na.omit(data.yield_change)
+
+# Set X0 to coredata of xts object (i.e. data matrix) 
+X <- coredata(data.yield_change)
+
+# Compute column means
+column_means <- colMeans(X)
+cat("Column means of X (mean yield changes per tenor):\n")
+round(column_means, 5)
+
+# Compute column standard deviations
+column_standard_deviations <- apply(X, 2, sd)
+cat("\nColumn standard deviations of X (volatility of yield changes per tenor):\n\n")
+round(column_standard_deviations, 5)
+
+cat("\nSorted standard deviations of yield changes per tenor (decreasing order):\n\n")
+round(sort(column_standard_deviations, decreasing = TRUE), 5)
+```
+
+```{r}
+# Centering is performed per column: subtracts column means if center = TRUE
+# optionally divides by column standard deviations if scale = TRUE
+X <- scale(X, center = TRUE, scale = FALSE)
+X.PCA_Covariance <- princomp(X) 
+X.PCA_Correlation <- princomp(X, cor = TRUE)
+#Covariance PCA answers: which maturities contribute most to overall variance?
+#Correlation PCA answers: how do maturities move together?
+print(names(X.PCA_Covariance))
+
+# "sdev"
+# Standard deviations of the principal components
+# These are the square roots of the eigenvalues of the covariance/correlation matrix
+# Dimension: vector of length p (number of variables)
+
+# "loadings"
+# Matrix of principal component loadings (eigenvectors)
+# Dimension: p x p
+
+# "center"
+# Mean of each variable used for centering the data
+# Dimension: vector of length p
+
+# "scale"
+# Scaling applied to each variable (if scale = TRUE)
+# Dimension: vector of length p
+# If no scaling was applied, this is typically NULL or a vector of ones
+
+# "n.obs"
+# Number of observations used in PCA
+# Dimension: scalar (single number)
+
+# "scores"
+# Principal component scores 
+# Each column is a principal component
+# Dimension: n x p, n = number of observations, p = number of variables
+
+# "call"
+# The function call used to create the object
+```
+
+\newpage
 
 Two principal components analyses are conducted on the data for 2001-2005, the first using the sample covariance matrix and the second using the sample correlation matrix. The results are:
 
-4(a) Compare the loadings (eigen-vectors) of the frst principal component variable for the two cases. The loadings are all positive for the covariance case and all negative for the correlation case. Is the diference in sign meaningful? (Hint: consider the eigen-vector/value decomposition of the matrices; does the decomposition change if any eigen-vector is multiplied by −1?)
+```{r}
+cat("US Treasury Yield Data: 2001–2005\n\n",
+    "Principal Components Analysis of Yield Changes - Covariance Matrix\n\n",
+    sep="")
+summary(X.PCA_Covariance)
+cat("\nLoadings of Principal Components Variables:\n")
+round(unclass(X.PCA_Covariance$loadings),4)
+cat("\nPrincipal Components Analysis of Yield Changes - Correlation Matrix\n\n",
+    sep="")
+summary(X.PCA_Correlation)
+cat("\nLoadings of Principal Components Variables:\n")
+round(unclass(X.PCA_Correlation$loadings),4)
+
+```
+
+## 4(a)
+
+Compare the loadings (eigen-vectors) of the first principal component variable for the two cases. The loadings are all positive for the covariance case and all negative for the correlation case. Is the difference in sign meaningful? (Hint: consider the eigen-vector/value decomposition of the matrices; does the decomposition change if any eigen-vector is multiplied by −1?)
 
 Answer:
 
-4(b) The magnitudes of the loadings for the frst principal component has a larger range from smallest to largest for the covariance matrix case compared to the correlation matrix case. The loading on the least variable yield change (DGS3MO) is higher in magnitude for the correlation matrix case. Also, the loadings on the highly variable yield changes are lower in magnitude for correlation matrix case. Provide a logical explanation for why the range of magnitudes is larger for the covariance case. (Recall that the frst principal component variable is the normalized weighted average of the yield-change variables which has the highest variance (the normalized weights have sum-of squares equal to 1). For the covariance matrix case, the yield-change variables are the original variables while for the correlation matrix case, these yield-change variables have been scaled to have mean 0 and variance 1.)
+No, the difference is not meaningful. Indeed, if $\vec{v}$ is an eigenvector of $A$, then $-\vec{v}$ is also an eigenvector of $A$ for the same eigenvalue.
+
+## 4(b)
+
+The magnitudes of the loadings for the first principal component has a larger range from smallest to largest for the covariance matrix case compared to the correlation matrix case. The loading on the least variable yield change (DGS3MO) is higher in magnitude for the correlation matrix case. Also, the loadings on the highly variable yield changes are lower in magnitude for correlation matrix case.
+
+Provide a logical explanation for why the range of magnitudes is larger for the covariance case. (Recall that the first principal component variable is the normalized weighted average of the yield-change variables which has the highest variance (the normalized weights have sum-of squares equal to 1). For the covariance matrix case, the yield-change variables are the original variables while for the correlation matrix case, these yield-change variables have been scaled to have mean 0 and variance 1.)
 
 Answer:
 
-4(c) Provide an interpretation of the frst three principal component variables for the correlation matrix case. Compare these to an interpretation of those for the covariance matrix case.
+In the covariance-based PCA, the variables are not standardized, so maturities with higher volatility contribute more to the total variance. Since the first principal component is the normalized linear combination of the variables that maximizes variance, it assigns larger weights (in magnitude) to the more volatile yield changes and smaller weights to the less volatile ones. This leads to a wider dispersion in the loadings across tenors. In summary, The larger range of loadings in the covariance matrix case arises from differences in the variances of the original variables.
+
+In contrast, for the correlation matrix case, all variables are standardized to have variance 1. As a result, no single maturity dominates due to scale differences. Consequently, the loadings of the first principal component are more balanced across tenors, leading to a smaller range of magnitudes.
+
+Thus, the larger range in the covariance case reflects the fact that PCA is capturing both co-movement and differences in volatility, whereas in the correlation case it captures only co-movement.
+
+## 4(c)
+
+Provide an interpretation of the first three principal component variables for the correlation matrix case. Compare these to an interpretation of those for the covariance matrix case.
 
 Answer:
 
-4(d) If the analysis objective is to model dynamics of the term-structure of interest rates across all tenors, argue why the principal components analysis of the correlation matrix might be preferred to that of the covariance matrix.
+When PCA is performed on the correlation matrix, each variable is standardized to have unit variance. As a result, all maturities are weighted equally, and the principal components capture patterns of co-movement across the entire yield curve.
+
+The first three principal components can be interpreted as follows:
+
+-   The first principal component (PC1) represents the level factor. Its loadings are typically of the same sign and similar magnitude across all tenors, indicating a parallel shift of the yield curve.
+
+-   The second principal component (PC2) represents the slope factor. Its loadings usually have opposite signs for short- and long-term maturities, capturing steepening or flattening movements of the curve.
+
+-   The third principal component (PC3) represents the curvature factor. Its loadings tend to assign opposite signs to medium-term maturities relative to short and long maturities, reflecting changes in the hump shape of the curve.
+
+In the covariance matrix case, the interpretation of the first three components is qualitatively similar (level, slope, curvature). However, because the covariance matrix does not standardize the variables, maturities with higher volatility receive greater weight. As a result:
+
+-   The level factor (PC1) tends to dominate more strongly, often explaining a larger proportion of the total variance.
+-   The loadings may be more influenced by the most volatile tenors.
+-   The slope and curvature factors may be less balanced across maturities.
+
+## 4(d)
+
+If the analysis objective is to model dynamics of the term-structure of interest rates across all tenors, argue why the principal components analysis of the correlation matrix might be preferred to that of the covariance matrix.
 
 Answer:
 
-4(e) Compute the Total Variance (sum of variances of principal components variables) for the correlation case of the PCA. Is this value an integer? If so, explain why.
+Yield changes may exhibit heterogeneous volatility across tenors. Using the covariance matrix can bias the principal component analysis toward high-variance maturities; however, correlation-based principal component analysis mitigates this issue by normalizing each series.
+
+In conclusion, principal component analysis of the correlation matrix may be preferred because it removes scale effects and ensures that all maturities contribute equally to the extracted factors.
+
+## 4(e)
+
+Compute the Total Variance (sum of variances of principal components variables) for the correlation case of the PCA. Is this value an integer? If so, explain why.
 
 Answer:
 
 ```{r}
+#round(X.PCA_Correlation$sdev^2,4)
+Total_variance_Correlation_PCA <- sum(X.PCA_Correlation$sdev^2)
+print(Total_variance_Correlation_PCA)
 
 ```
 
-```{r}
+When PCA is performed on the correlation matrix, each variable is standardized to have unit variance, so the diagonal elements of the correlation matrix ( $C$ ) are equal to 1. Besides, the variances of the principal components variables are equal to the eigenvalues of the correlation matrix C. Therefore, the total variance is given by:
 
-```
+$\text{Total Variance} = \sum_{k=1}^{9} \mathrm{Var}(\text{PC}_k) = \sum_{k=1}^{9} \lambda_k = \mathrm{tr}(C) = \sum_{j=1}^{9} 1 = 9$
+
+Since the trace of a matrix equals the sum of its eigenvalues.
+
+In general, for principal components analysis (PCA) based on the correlation matrix, the total variance equals the number of variables, which in this case is 9.
