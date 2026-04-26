@@ -16,7 +16,7 @@ format:
 
 \newpage
 
-# Problem 1
+# Problem 1. Brownian Motion with drift and volatility
 
 Suppose ${W (t)}$ is a Brownian motion model with drift $\mu \in R$ and volatility $\sigma$\> 0.
 
@@ -79,9 +79,11 @@ matplot(time_grid, W, type = "l", lty = 1, lwd = 2,
 # Add legend
 legend("topleft", legend = paste("Path", 1:n_paths),
        col = 1:n_paths, lty = 1, lwd = 2, cex = 0.7)
+
+
 ```
 
-# Problem 2
+# Problem 2. Poisson Process
 
 The stochastic process {$N(t), t > 0$}, is a Poisson process with intensity or jump-rate $λ$ if:\
 - For any $n$ times: $0 = t_0 <t_1 < ··· <t_n$, the increments $N(t_k)−N(t_{k−1})$ are independent, for $1 ≤ k ≤ n$.
@@ -141,7 +143,7 @@ legend("topleft", legend = paste("Path", 1:n_paths),
        col = 1:n_paths, lty = 1, lwd = 2, cex = 0.7)
 ```
 
-# Problem 3. Extreme Value Method for Estimating the Variance of the Rate of Return.
+# Problem 3. Extreme value method for estimating the variance of the rate of return.
 
 ## 3(a)
 
@@ -153,9 +155,9 @@ Explain the definition of the term $D_x$ in Section II.
 
 Answer:
 
-$D_x$ is the standard deviation of a displacement variable: $$
-D_x = \sqrt{\frac{1}{n} \sum_{i=1}^{n} (d_i - \bar{d})^2}
-$$ where $\bar{d} = \frac{1}{n} \sum_{i=1}^{n} d_i$ is the sample mean displacement.
+If $X_t$ has a probability density function $f(x)=\frac{1}{\sqrt{2\pi Dt}}exp(\frac{-(x-x_0)^2}{2Dt})$ where $D$ is the diffusion constant. Then we can estimate D using $D_x$: $$
+D_x = \frac{1}{n-1} \sum_{i=1}^{n} (d_i - \bar{d})^2
+$$ where $d_i=x_i-x_{i-1}$ is the displacement during the ith interval and $\bar{d} = \frac{1}{n} \sum_{i=1}^{n} d_i$ is the sample mean displacement.
 
 ## 3(c)
 
@@ -163,33 +165,38 @@ Explain the definition of the term $D_l$ in Section III.
 
 Answer:
 
-$D_l$ is the sample mean of the squared difference between the maximum and minimum values of x in the sample, multiplied by 0.361.
+$D_l$ is an estimator of $D$ based on the method of moments and the identity $\mathbb{E}(l^2) = 4 \ln(2)\, D t$. Rearranging, we obtain:\
+$$D=\frac{1}{4 \ln(2)}\mathbb{E}(l^2) \approx 0.361 \cdot \mathbb{E}(l^2) \quad \text{for } t = 1$$Hence, $D_l$ is obtained by replacing the expectation with its empirical analogue, namely the sample mean of the squared ranges computed over $n$ unit time intervals: $$
+D_l =0.361 \  \frac{1}{n} \sum_{i=1}^{n} l_i^2
+$$ where $l_i = \max X_t- \min X_t$ denotes the observed range of the process over the $i$-th unit time interval.
 
-3(d)
+## 3(d)
 
 Using the results of Section IV, explain why the improvement using $D_l$, as an estimate of V (in Section V) could be of particular importance in studies of the time and price dependence (if any) of V.
 
 Answer:
 
+The improvement obtained by using $D_l$ instead of $D_x$ to estimate the variance of the rate of return is that less data is required to compute an estimate with the same accuracy.
+
 # Problem 4. Volatility Case Studies
 
 ## 4(a)
 
-Detail/comment on specifc results of the SP500 case study you con sider interesting/signifcant.
+Detail/comment on specific results of the SP500 case study you consider interesting/significant.
 
 ## 4(b)
 
-Detail/comment on specifc results of the ARKK case study you con sider interesting/signifcant.
+Detail/comment on specific results of the ARKK case study you consider interesting/significant.
 
 ## 4(c)
 
-Compare the results/fndings about volatility for ARKK versus the SP500.
+Compare the results/findings about volatility for ARKK versus the SP500.
 
 # Problem 5. Optional / Extra Credit
 
 ## 5(a)
 
-Create the pdf fle of the case study.
+Create the pdf file of the case study.
 
 ## 5(b)
 
