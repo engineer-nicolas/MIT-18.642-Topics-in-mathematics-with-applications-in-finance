@@ -1,0 +1,1070 @@
+---
+title: "Empirical Analysis of the Capital Asset Pricing Model (CAPM) - MIT 18.642"
+editor: visual
+execute:
+  echo: true
+
+format:
+  pdf:
+    output-file: "mit18_642_f24_lec06_1_3 - Empirical Analysis of CAPM"
+    toc: true
+    number-sections: true
+    
+  html:
+    output-file: "mit18_642_f24_lec06_1_3 - Empirical Analysis of CAPM"
+    embed-resources: true
+    image-format: "png"
+    toc: true
+    toc-location: "left-body"
+    number-sections: true
+---
+
+\newpage
+
+# Capital Asset Pricing Model Theory
+
+Sharpe (1964) and Lintner (1965) developed the Capital Asset Pricing Model for a market in which investors have the same expectations, hold portfolios of risky assets that are mean-variance efficient, and can borrow and lend money freely at the same risk-free rate. In such a market, the expected return of asset j is
+
+$$E[R_j] = R_{riskfree}+\beta_j(E[R_{Market}]−R_{riskfree})$$
+
+$$\beta_j = Cov[R_j,R_{Market}]/Var[R_{Market}]$$
+
+where $R_{Market}$ is the return on the market portfolio and $R_{riskfree}$ is the return on the risk-free asset.
+
+Consider fitting the simple linear regression model of a stock’s daily excess return on the market-portfolio daily excess return, using the S&P 500 Index as the proxy for the market return and the 3-month Treasury constant maturity rate as the risk-free rate. The linear model is given by:
+
+$R^*_{j,t}=\alpha_j+\beta_j R_{Market,t}+\varepsilon_{j,t}$, t=1,2, ... .
+
+where $\varepsilon_{j,t}$ are white noise $WN(0, \sigma^2)$ .
+
+Under the assumptions of the CAPM, the regression parameters $(\alpha_j, \beta_j)$ are such that $\beta_j$ is the same as in the CAPM model, and $\alpha_j$ is zero.
+
+# Install and Load Packages
+
+```{r, warning=FALSE, message=FALSE}
+
+# Install/load R packages 
+# Collect historical financial data from internet
+# Create time series data matrix: casestudy1.data0.0
+#   Closing prices on stocks (BAC, GE, JDSU, XOM)
+#   Closing values of indexes (SP500)
+#   Yields on constant maturity US rates/bonds (3MO, 1YR, 5YR, 10 YR)
+#   Closing price on crude oil spot price
+
+
+
+# 0. Install and load packages ----
+#
+# 0.1 Install packages ---
+# Load packages into R session (and install if necessary)
+
+# require() returns TRUE if the package is successfully loaded
+# and FALSE if it is not found.
+if (!require("pacman")) install.packages("pacman")
+if (!require("conflicted")){
+  # Install specific version from GitHub if not already present
+  devtools::install_github("r-lib/conflicted")
+}
+
+# Note: p_load checks for existence before attempting installation
+pacman::p_load(
+  quantmod,  # Financial quantitative modeling
+  tseries,   # Time series analysis
+  vars,      # Vector Autoregressive models
+  fxregime,  # Exchange rate regimes
+  moments,
+  rugarch,
+  xts,
+  graphics,
+  tidyquant,
+  tidyverse,
+  fpp2
+  )
+
+```
+
+```{r}
+# 0.2 Load packages into R session
+
+library("quantmod")  
+library("tseries")  
+library("vars")  
+library("fxregime")  
+library("moments")  
+library("rugarch")
+library("graphics")
+library("tidyquant")
+library("tidyverse")
+library("fpp2")
+library("ggplot2")
+
+```
+
+# Load Data Set (if available)
+
+```{r}
+file_name="mit18_642_f24_lec06_1_3 - Empirical Analysis of CAPM"
+
+# Check whether the .RData file exists in the working directory
+dataset_exists=file.exists(file_name)
+
+if (dataset_exists) {
+  # Load objects stored in the .RData file
+  load(file_name)
+  
+} else {
+
+  # Display a message if the file cannot be found
+  message("File not found")
+
+}
+
+```
+
+# Construct Data Set if it is not available
+
+## Collect data for S&P 500 Index and 4 stocks
+
+```{r}
+
+if (!dataset_exists) {
+
+# 1. Load data into R session ----
+
+# 1.1  Stock Price Data from Yahoo
+
+# 1.1.1 Set start and end date for collection in YYYYMMDD (numeric) format
+
+date_start <- "2000-01-01"
+date_end <- "2013-05-31"
+
+# 1.1.2 Collect historical data for S&P 500 Index and 4 stocks
+
+# Stock tickers
+
+# ^GSPC = S&P 500 Index
+# BAC   = Bank of America
+# GE    = General Electric
+# VIAV  = Viavi Solutions
+# XOM   = Exxon Mobil
+stocks_tickers <- c("BAC", "GE", "VIAV", "XOM", "^GSPC")
+
+# Download stock data
+stock_data <- tq_get(
+  stocks_tickers,
+  get = "stock.prices",
+  from = date_start,
+  to = date_end
+)
+
+# Replace the ticker "^GSPC" with a cleaner one: "SP500"
+stock_data$symbol[stock_data$symbol == "^GSPC"] <- "SP500"
+
+}
+```
+
+## Plot chart for the S&P 500 Index
+
+```{r}
+
+if (!dataset_exists) {
+  
+# Plot OHLCV chart for the S&P 500 index
+
+# Filter S&P 500 data from the dataset
+SP500 <- stock_data %>%
+  dplyr::filter(symbol == "SP500")
+
+# Convert tibble to xts object using OHLCV columns
+SP500 <- xts(
+  x = SP500[, c("open", "high", "low", "close", "volume")],
+  order.by = SP500$date
+)
+
+# Plot OHLCV chart
+chartSeries(SP500)
+}
+```
+
+## Collect yields on U.S. Treasury bonds and crude oil prices
+
+```{r}
+
+if (!dataset_exists) {
+  
+# 1.2 Federal Reserve Economic Data (FRED) from the St. Louis Federal Reserve
+
+# Series name| Description
+ 
+# DGS3MO     | 3-Month Treasury, constant maturity rate
+# DGS1       | 1-Year Treasury, constant maturity rate
+# DGS5       | 5-Year Treasury, constant maturity rate
+# DGS10      | 10-Year Treasury, constant maturity rate
+
+# DAAA       | Moody's Seasoned Aaa Corporate Bond Yield 
+# DBAA       | Moody's Seasoned Baa Corporate Bond Yield 
+
+# DCOILWTICO | Crude Oil Prices: West Texas Intermediate (WTI) - Oklahoma
+
+fred_series <- c(
+  "DGS3MO",
+  "DGS1",
+  "DGS5",
+  "DGS10",
+  "DAAA",
+  "DBAA",
+  "DCOILWTICO"
+)
+
+# Apply tidyquant  function 
+#   tq_get(series_name, get = "economic.data")
+#      Returns historical data for any symbol at the website
+#      http://research.stlouisfed.org/
+
+# Download Federal Reserve Economic Data (FRED)
+fred_data <- tq_get(
+  fred_series,
+  get = "economic.data",
+  from = date_start,
+  to = date_end
+)
+
+# Determine data dimensions
+dim(fred_data)
+
+# Check object class
+class(fred_data)
+}
+```
+
+```{r}
+if (!dataset_exists) {
+
+# Convert from long to wide format
+macroeconomic_data <- tidyr::pivot_wider(
+  fred_data,
+  names_from = symbol,
+  values_from = price
+)
+
+# Determine data dimensions
+dim(macroeconomic_data)
+
+# Check object class
+class(macroeconomic_data)
+
+# Count missing values in each column
+colSums(is.na(macroeconomic_data))
+}
+```
+
+## Plot U.S. Treasury yield series
+
+```{r, warning=FALSE}
+
+if (!dataset_exists) {
+  
+# Plot the interest rates series together
+
+ts.plot(
+  as.ts(
+    dplyr::select(macroeconomic_data, -date, -DCOILWTICO)
+  ),
+  col = rainbow(6),
+  main = "FRED Data: Rates"
+)
+
+# Add legend to plot
+graphics::legend(
+  "topright",
+  legend=colnames(macroeconomic_data)[2:7],
+  lty=rep(1,6), 
+  col=rainbow(6), 
+  cex=0.75
+  )
+}
+```
+
+## Plot crude oil price series
+
+```{r}
+if (!dataset_exists) {
+# Plot the Crude Oil Price
+
+# Convert to xts
+oil_prices <- xts(
+  x = macroeconomic_data$DCOILWTICO,
+  order.by = macroeconomic_data$date
+  )
+
+chartSeries(
+  oil_prices,
+  name = "Crude Oil Price (WTI)"
+)
+}
+```
+
+## Combine stock and macro-economic data
+
+```{r}
+if (!dataset_exists) {
+# 2.2 Merge the closing prices for the stock market data series
+
+# Keep closing prices and reshape from long to wide format
+stock_closing_prices <- stock_data %>%
+  dplyr::select(date, symbol, close) %>%
+  tidyr::pivot_wider(
+    names_from = symbol,
+    values_from = close
+  )
+
+# Sort data by date in ascending order
+stock_closing_prices <- dplyr::arrange(stock_closing_prices, date)
+
+# 2.3 Merge the yahoo and Fred data together
+
+# 2.3.1 Merge preserving all dates
+
+# Outer join to compare missing alignment across datasets
+final_dataset <- full_join(
+  stock_closing_prices,
+  macroeconomic_data,
+  by = "date"
+)
+
+# Check total rows after full merge
+dim(final_dataset)
+}
+```
+
+## Process missing values
+
+```{r}
+if (!dataset_exists) {
+# Count missing values per column
+colSums(is.na(final_dataset))
+}
+```
+
+Delete observations where S&P 500 is missing
+
+```{r}
+if (!dataset_exists) {
+# 2.3.2 Delete observations where S&P 500 is missing
+
+final_dataset <- final_dataset %>%
+  dplyr::filter(!is.na(SP500))
+
+# Check total rows after deleting missing values
+dim(final_dataset)
+
+# Count missing values per column
+colSums(is.na(final_dataset))
+}
+```
+
+Fill missing values using last observation carried forward (LOCF)
+
+```{r}
+if (!dataset_exists) {
+# Remaining missing values are in interest rates and crude oil prices
+
+# This occurs because equity markets and bond/commodity markets 
+# have different holidays/trading calendars
+
+# Fill missing values using last observation carried forward (LOCF)
+final_dataset <- na.locf(final_dataset)
+
+# Count missing values per column
+colSums(is.na(final_dataset))
+}
+```
+
+## Save data set
+
+```{r}
+if (!dataset_exists) {
+
+# Vector containing object names to save
+objects_to_save <- c(
+  "date_end",
+  "date_start",
+  "final_dataset"
+)
+
+# Save selected objects
+save(
+  list = objects_to_save,
+  file = file_name
+)
+
+}  
+```
+
+# Historical Financial Data
+
+```{r}
+
+dim(final_dataset)
+names(final_dataset)
+```
+
+```{r}
+str(final_dataset)
+```
+
+## Plot GE stock prices, market-portfolio proxy (S&P 500) and risk-free rate (3-month treasury yield)
+
+We first plot the raw data for the stock $GE$, the market-portfolio index $SP500,$ and the risk-free interest rate.
+
+```{r}
+plot(final_dataset$date, final_dataset$GE,
+     type = "l",
+     xlab = "Date",
+     ylab = "Price",
+     main = "GE Stock"
+     )
+```
+
+```{r}
+plot(final_dataset$date, final_dataset$SP500,
+     type = "l",
+     xlab = "Date",
+     ylab = "Value",
+     main = "S&P500 Index")
+```
+
+```{r}
+plot(final_dataset$date, final_dataset$DGS3MO,
+     type = "l",
+     xlab = "Date",
+     ylab = "Rate",
+     main = "3-Month Treasury Rate (Constant Maturity)")
+```
+
+Now we construct the variables with the log daily returns of GE and the SP500 index as well as the risk-free asset returns.
+
+```{r}
+# Define bond/debt tickers 
+bonds_tickers <- c("DGS3MO","DGS1","DGS5","DGS10","DAAA","DBAA")
+
+# Define stocks tickers 
+stocks_tickers <- c("BAC","GE","VIAV","XOM","SP500","DCOILWTICO")
+
+```
+
+## Compute number of days between consecutive observations
+
+```{r}
+# Ensure time ordering
+final_dataset <- final_dataset %>% arrange(date)
+
+# Compute number of days between consecutive observations
+final_dataset <- final_dataset %>%
+  arrange(date) %>%
+  mutate(
+    # Number of days between consecutive observations
+    days_elapsed = c(1, as.numeric(diff(date)))
+  )
+```
+
+```{r}
+# Compute histogram without plotting labels manually first
+h <- hist(
+  final_dataset$days_elapsed,
+  breaks = seq(
+    floor(min(final_dataset$days_elapsed)) - 0.5,
+    ceiling(max(final_dataset$days_elapsed)) + 0.5,
+    by = 1
+    ),
+  main = "Distribution of Days Between Observations",
+  xlab = "Days elapsed",
+  ylab = "Frequency"
+)
+
+# Add frequency labels on top of bars
+text(
+  x = h$mids,
+  y = h$counts,
+  labels = h$counts,
+  pos = 3,        # above the bar
+  cex = 0.8,       # text size
+)
+```
+
+```{r}
+rm(h)
+```
+
+## Compute daily returns and log-returns
+
+```{r}
+# Compute simple returns for selected tickers
+final_dataset <- final_dataset %>%
+  arrange(date) %>%
+  mutate(across(stocks_tickers,
+    ~ c(NA, diff(.) / head(., -1)), # simple returns
+    .names = "return_{.col}"
+  ))
+
+# Compute log returns for selected tickers
+final_dataset <- final_dataset %>%  
+  mutate(across(all_of(stocks_tickers),
+    ~ c(NA, diff(log(.))),  # diff log prices = log returns
+    .names = "diff_log_price_{.col}"
+  ))
+```
+
+## Compute daily log-returns of the risk-free rate proxy: 3-Month Treasury yield
+
+If $B_t$ is the price of a bond at time t, then we have that:
+
+$$
+\Delta \log B_t = \log(B_t) - \log(B_{t-1}) = \log\left(\frac{B_t}{B_{t-1}}\right) = log(1+\frac{B_t}{B_{t-1}}-1) = log(1+R_t) 
+$$
+
+where the simple return $R_t$ is equal to $R_t = \frac{B_t - B_{t-1}}{B_{t-1}}$.
+
+```{r}
+# Compute difference between log prices of the risk-free asset
+# (3-Month Treasury Rate (Constant Maturity))
+# Adjusted using elapsed days and standard of 360 days per year
+
+final_dataset <- final_dataset %>%
+  mutate(
+    diff_log_DGS3MO_risk_free = log(1 + 0.01 * DGS3MO * days_elapsed / 360)
+  )
+```
+
+## Compute excess returns over risk free rate proxy
+
+```{r}
+# Compute excess returns over risk-free rate using a loop
+for (ticker in stocks_tickers) {
+  
+  # Construct column name for log returns of each stock
+  log_ret_col <- paste0("diff_log_price_", ticker)
+  
+  # Construct output column name
+  excess_col <- paste0("excess_", ticker)
+  
+  # Compute excess return
+  final_dataset[[excess_col]] <-
+    final_dataset[[log_ret_col]] - final_dataset$diff_log_DGS3MO_risk_free
+}
+rm(ticker,log_ret_col,excess_col)
+```
+
+Now we plot the excess returns of GE vs those of the SP500:
+
+```{r}
+# Scatter plot of excess returns
+plot(final_dataset$excess_SP500,
+     final_dataset$excess_GE,
+     xlab = "SP500 excess return",
+     ylab = "GE excess return",
+     main = "GE excess return vs SP500 excess return")
+
+abline(h=0,v=0)
+```
+
+## Save computed values
+
+```{r}
+# Vector containing object names to save
+objects_to_save <- c(
+  "date_end",
+  "date_start",
+  "final_dataset"
+)
+
+# Save selected objects
+save(
+  list = objects_to_save,
+  file = file_name
+)
+```
+
+# Fitting the Linear Regression for CAPM
+
+The linear regression model is fit using the R-function `lm( )`:
+
+```{r}
+# Fit linear model
+linear_regression <- lm(excess_GE ~ excess_SP500, data = final_dataset)
+
+names(linear_regression) #element names of list object model
+summary(linear_regression) #function summarizing objects created by lm()
+```
+
+Note that the $t$-statistic for the intercept $\alpha_{GE}$ is not significant:
+
+```{r}
+linear_regression.summary <- summary(linear_regression)
+tstat.intercept <- round(
+  linear_regression.summary$coefficients["(Intercept)", "t value"],
+  digits=4)
+print(tstat.intercept)
+```
+
+```{r}
+# Scatter plot of excess returns
+plot(final_dataset$excess_SP500,
+     final_dataset$excess_GE,
+     xlab = "SP500 excess return",
+     ylab = "GE excess return",
+     main = "GE vs SP500")
+
+abline(h=0,v=0)
+
+# Add regression line
+abline(linear_regression, col = "red")
+```
+
+# R-squared: Proportion of Variance
+
+The R-squared statistic is the proportion of the variance of the dependent variable which is explained by the linear regression model. This statistic is most easily interpreted by displaying the plot of the Actual values versus Fitted values for the regression.
+
+# Residuals Analysis
+
+When fitting a linear regression model the ideal assumptions are that the regression errors are independent and identically distributed Gaussian random variables.
+
+In this case, the t-distribution applies for testing the statistical significance of coefficient estimates and the F-distribution applies for testing the statistical significance of the overall regression model.
+
+Typically, residuals analysis begins by evaluating the consistency of the data with the assumption of Gaussian errors.
+
+We plot the histogram of the model residuals:
+
+```{r}
+residuals <- as.numeric(linear_regression$residuals)
+std.residuals <- residuals/sqrt(1.-hatvalues(linear_regression))
+
+
+par(mfcol=c(1,1))
+
+model_name="CAPM"
+hist(std.residuals,
+     freq=FALSE,
+     nclass=100,
+     main=paste(
+       c(
+         model_name,
+         ": Histogram of Std. Residuals \n",
+         "Normal Fits: MLE(Green) and Robust(Blue)"),
+       collapse="")
+     )
+
+std.residuals.mean <- mean(std.residuals)
+
+std.residuals.stdev.mle <- sqrt(mean(std.residuals^2) - (mean(std.residuals))^2)
+
+std.residuals.stdev.robust <- IQR(std.residuals)/1.3490
+
+std.residuals.sorted <- sort(std.residuals)
+
+std.residuals.density.mle <- dnorm(std.residuals.sorted,
+                                   mean=std.residuals.mean,
+                                   sd=std.residuals.stdev.mle)
+
+std.residuals.density.robust <- dnorm(std.residuals.sorted,
+                                      mean=std.residuals.mean,
+                                      sd=std.residuals.stdev.robust)
+
+lines(std.residuals.sorted, std.residuals.density.mle, col='green', lwd=2)
+lines(std.residuals.sorted, std.residuals.density.robust, col='blue', lwd=2)
+```
+
+This histogram includes two fitted densities. The first (in green) is specified by the maximum-likelihood estimates (MLEs) of the error mean and variance, assuming the regression residuals are independent and identically distributed Gaussian. In fact, the regression residuals are standardized to have equal variance- their unadjusted variance changes depending on the leverage of cases.
+
+The second density is specified robustly matching the error standard deviation to the observed inter-quantile range ($\hat{\sigma} = \frac{IQR}{1.3490}$ ).
+
+It appears that the MLE-fitted density under-estimates the distribution near the center, while the robust-fitted density under-estimates the distribution far from the center.
+
+A second graphical method for evaluating consistency with the Gaussian assumption is the QQ-Plot. The residuals are ordered from smallest to largest and these are plotted against the expected values of an ordered sample from a standard Normal distribution (with mean 0 and variance 1).
+
+```{r}
+qqnorm(std.residuals,
+       main=paste(
+       c(
+         model_name,
+         "\n Normal QQ Plot of Std. Residuals \n"
+         ),
+       sep="")
+     )
+abline(a=0, b=sqrt(var(std.residuals)), col="green",lwd=3)
+abline(a=0, b=IQR(std.residuals)/1.349, col="blue",lwd=3)
+title(sub=paste("Residual Sigma Fits: MLE (Green) and Robust (Blue)"))
+
+
+
+```
+
+If the data follow a Normal distribution, then the plot should conform to a straight line where the slope of the line is the Gaussian standard deviation and the intercept is the Gaussian mean. In this case, the intercepts are both zero, and the MLE fit has a higher standard deviation than the robust fit.
+
+A third way to evaluate the consistency of the regression-model residuals with a Gaussian distribution is to compute Fitted Percentiles of the sample data and compare the distribution with the uniform distribution. Under either the MLE or robust fit of the Gaussian distribution, we can compute the percentile associated with each residual:
+
+$$\text{Percentile}_i = \Phi^{-1}\left(\frac{\hat{\epsilon}_i - \hat{\mu}} {\hat{\sigma}}\right) $$
+
+where $\Phi(\cdot)$ is the cumulative distribution function of the standard normal distribution N(0,1) and $\Phi^{-1}(\cdot)$ is its inverse function. If the Normal assumption were true, then we would expect the fitted percentiles to follow a uniform distribution between 0 and 100.
+
+The histograms of the fitted percentiles are now displayed for each case:
+
+```{r}
+n_class=100
+hist(100*pnorm(std.residuals,
+               mean = std.residuals.mean,
+               sd=std.residuals.stdev.mle),
+     nclass=n_class,
+     xlab = "Fitted Percentile",
+     main=paste(
+       c(
+         model_name,
+         "\nHistogram of Residuals\n",
+         "MLE-Fitted Percentiles"),
+       collapse="")
+     )
+
+abline(h=length(std.residuals)/n_class, col="green",lwd=2)
+```
+
+For the MLE-Fitted Percentiles, the distribution is far form the uniform - there is significant leptokurtosis (slender middle) and heavy tails.
+
+```{r}
+n_class=100
+hist(100*pnorm(std.residuals,
+               mean = std.residuals.mean,
+               sd=std.residuals.stdev.robust),
+     nclass=n_class,
+     xlab = "Fitted Percentile",
+     main=paste(
+       c(
+         model_name,
+         "\nHistogram of Residuals\n",
+         "Robust Fitted Percentile"),
+       collapse="")
+     )
+
+abline(h=length(std.residuals)/n_class, col="blue",lwd=2)
+```
+
+# Regression Diagnostics: Influence measures
+
+Some useful R functions
+
+-   `influence.measures()`: compute regression diagnostics evaluating case influence for the linear regression model; includes hat matrix, case-deletion statistics for the regression coefficients and for the residual standard deviation.
+
+-   `anova()`: conduct an Analysis of Variance for the linear regression model, detailing the computation of the F-statistic for no regression structure.
+
+```{r}
+# Compute influence measures (case-deletion statistics)
+# mesures used to detect influential observations
+linear_regression.inflm<-influence.measures(linear_regression)
+names(linear_regression.inflm)
+```
+
+```{r}
+# Dimensions of the influence matrix:
+# rows = observations, columns = diagnostic statistics
+dim(linear_regression.inflm$infmat)
+
+# Display rows of the influence matrix
+# Columns contain the following diagnostic measures:
+#   dfbetas   -> effect of each observation on coefficients
+#   dffit     -> effect on fitted values
+#   cov.r     -> effect on covariance matrix
+#   cook.d    -> Cook's distance
+#   hat       -> leverage values
+head(linear_regression.inflm$infmat,2)
+```
+
+```{r}
+# Each column corresponds to a criterion:
+# TRUE  -> the observation is flagged as potentially influential
+# FALSE -> the observation is not considered influential
+#          under that criterion.
+#
+# Rows correspond to observations in the dataset.
+# An observation with several TRUE values may deserve further inspection.
+head(linear_regression.inflm$is.inf,2)
+```
+
+```{r}
+# Table counts of influential/non-influential cases
+# as measured by the hat/leverage statistic.
+table(linear_regression.inflm$is.inf[,"hat"])
+```
+
+```{r}
+# Re-Plot data adding:
+#   fitted regression line
+#   selective highlighting of influential cases
+
+# Keep only observations used in the regression
+regression_data <- final_dataset %>%
+  dplyr::select(excess_SP500, excess_GE) %>%
+  na.omit()
+
+title_graph <- paste0(
+  "GE vs SP500 Data \n",
+  "OLS Fit (Green line)\n",
+  "High-Leverage Cases (red points)\n",
+  "High Cooks Distance (blue Xs)"
+  )
+
+plot(
+  regression_data$excess_SP500,
+  regression_data$excess_GE,
+  main = title_graph,
+  cex.main = 0.8
+)
+# Add line x=0 and y=0
+abline(h=0,v=0)
+
+# Add fitted regression line
+abline(linear_regression, col=3, lwd=3)
+
+# Plot cases with high leverage as red (col=2) "o"s
+index.inf.hat<-which(linear_regression.inflm$is.inf[,"hat"]==TRUE)
+
+points(
+  regression_data$excess_SP500[index.inf.hat],
+  regression_data$excess_GE[index.inf.hat],
+  col = 2,
+  pch = "o"
+)
+
+# Plot cases with high cooks distance as big (cex=1.5) blue (col=4) "X"s
+index.inf.cook.d<-which(linear_regression.inflm$is.inf[,"cook.d"]==TRUE)
+
+points(
+  regression_data$excess_SP500[index.inf.cook.d],
+  regression_data$excess_GE[index.inf.cook.d],
+  col = 4,
+  pch = "X",
+  cex = 1.5
+)
+```
+
+```{r}
+# Plot leverage of cases (diagonals of hat matrix)
+
+# Dates corresponding to observations used in regression
+regression_dates <- final_dataset$date[complete.cases(
+  final_dataset[, c("excess_GE", "excess_SP500")]
+)]
+
+# Create xts object containing leverage values indexed by date
+linear_regression.leverages <- xts(
+  linear_regression.inflm$infmat[, "hat"],
+  order.by = regression_dates
+)
+
+# Plot leverage time series
+chartSeries(linear_regression.leverages)
+
+```
+
+Note the cases are time points of the time series data:
+
+The financial crisis of 2008 is evident.
+
+The R function `plot.lm()` generates a useful 2x2 display of plots for various regression diagnostic statistics:
+
+```{r}
+layout(matrix(c(1,2,3,4),2,2)) # optional 4 graphs/page 
+plot(linear_regression)
+
+```
+
+In the Residual vs Fitted plot, there should be no pattern in the relationship of the Residuals to the Fitted values. The red line will either be consistent with a flat line corresponding to no pattern or a non-linear pattern which may indicate heteroscedasticity of residuals.
+
+The Normal Q-Q plot will appear as a straight line if the residuals are well-modeled by a Normal distribution.
+
+The residual vs leverage plot displays contours of Cook’s distance on the plane of standardized residuals versus leverage. High Cook’s distance occurs when both standardized residuals and leverage are high in magnitude.
+
+# Adding Macro-economic Factors to CAPM
+
+The CAPM relates a stock’s return to that of the diversified market portfolio, proxied here by the S&P 500 Index. A stock’s return can depend on macro-economic factors, such as commodity prices, interest rates, economic growth (GDP).
+
+## Linear regression for the simple CAPM
+
+```{r}
+# The linear regression for the simple CAPM:
+linear_regression <- lm(excess_GE ~ excess_SP500, data = final_dataset)
+summary.lm(linear_regression)
+```
+
+## Linear regression for the extended CAPM
+
+```{r}
+# The linear regression for the extended CAPM:
+linear_regression_2 <- lm(excess_GE ~ excess_SP500 + excess_DCOILWTICO,
+                          data = final_dataset
+                          )
+summary.lm(linear_regression_2)
+```
+
+The regression coefficient for the oil factor is statistically significant and negative. Therefore over the analysis period, price changes in GE stock are negatively related to the price changes in oil.
+
+# Analysis of Variance
+
+```{r}
+# Display the ANOVA table associated with the linear regression model.
+#
+# ANOVA (Analysis of Variance) decomposes the total variability
+# of the dependent variable into:
+#
+#   1. Variability explained by the regression model
+#   2. Residual variability (unexplained variation / errors)
+#
+# The table typically includes:
+#
+#   Df       -> degrees of freedom
+#   Sum Sq   -> sum of squares associated with each source of variation
+#   Mean Sq  -> sum of squares divided by corresponding degrees of freedom
+#   F value  -> test statistic for overall model significance
+#   Pr(>F)   -> p-value associated with the F-test
+# Display the ANOVA table associated with the linear regression model.
+#
+# ANOVA (Analysis of Variance) decomposes the total variability
+# of the dependent variable into:
+#
+#   1. Variability explained by the regression model
+#   2. Residual variability (unexplained variation / errors)
+#
+# The table typically includes:
+#
+#   Df       -> degrees of freedom
+#   Sum Sq   -> sum of squares associated with each source of variation
+#   Mean Sq  -> sum of squares divided by corresponding degrees of freedom
+#   F value  -> test statistic for overall model significance
+#   Pr(>F)   -> p-value associated with the F-test
+#
+# A small p-value indicates that the regression model explains
+# a statistically significant portion of the variation in GE returns.
+anova(linear_regression)
+```
+
+```{r}
+anova(linear_regression_2)
+```
+
+## ANOVA Comparison of Nested Linear Regression Models
+
+-   Requirements:
+
+The ANOVA comparison of linear regression models requires the models to be **nested**. This means that the larger model must contain all explanatory variables from the smaller model, plus one or more additional variables. For example:
+
+`simple_model   <- lm(Y ~ X1, data = df)`
+
+`complex_model <- lm(Y ~ X1 + X2, data = df)`
+
+Here, `simple_model` is nested within `complex_model` because the complex model includes all variables from the first model.
+
+-   Objective:
+
+The ANOVA comparison evaluates whether the more complex model provides a statistically significant improvement in fit relative to the simpler model.
+
+The test compares:
+
+$RSS_{\text{simple}} \quad \text{vs} \quad RSS_{\text{complex}}$
+
+where $RSS$ denotes the Residual Sum of Squares.
+
+-   Interpretation:
+
+A small p-value indicates that the more complex model explains a significantly larger portion of the variability in the response variable.
+
+```{r}
+anova(linear_regression,linear_regression_2)
+```
+
+ANOVA Output Table contains:
+
+| Column | Meaning |
+|------------------------------------|------------------------------------|
+| `Res.Df` | Residual degrees of freedom |
+| `RSS` | Residual Sum of Squares |
+| `Df` | Number of additional parameters introduced in the larger model |
+| `Sum of Sq` | Reduction in RSS obtained by the complex model |
+| `F` | F-statistic value used for the nested model comparison |
+| `Pr(>F)` | p-value associated with the F-test |
+
+A small p-value ( `Pr(>F) < 0.05`) indicates that the more complex model explains a significantly larger portion of the variability in the response variable.
+
+# Exxon-Mobil stock
+
+Consider the corresponding models for the oil stock XOM (Exxon-Mobil)
+
+```{r}
+# The linear regression for the simple CAPM:
+exxon_mobil <- lm(excess_XOM ~ excess_SP500, data = final_dataset)
+summary.lm(exxon_mobil)
+```
+
+```{r}
+# The linear regression for the extended CAPM:
+exxon_mobil_plus_oil <- lm(excess_XOM ~ excess_SP500 + excess_DCOILWTICO,
+                          data = final_dataset
+                          )
+summary.lm(exxon_mobil_plus_oil)
+```
+
+Results:
+
+-   The R-squared for $XOM$ is lower than for $GE$.
+
+-   The beta of XOM with the SP500 is less than 1.
+
+-   The regression coefficient for the oil factor ($DCOILWTICO$) is statistically significant and positive.
+
+For the extended model, we use the R function `plot.lm()` to display regression diagnostic statistics:
+
+```{r}
+layout(matrix(c(1,2,3,4),2,2)) # optional 4 graphs/page 
+plot(exxon_mobil_plus_oil)
+```
+
+The high-leverage cases in the data are those which have high Mahalanobis distance from the center of the data in terms of the column space of the independent variables (see: Fall 2013 Regression Analysis Problem Set).
+
+We display the data in terms of the independent variables and highlight the high-leverage cases.
+
+```{r}
+# Refit the model using argument x=TRUE so that the lm object includes the
+# matrix of independent variables
+exxon_mobil_plus_oil <- lm(excess_XOM ~ excess_SP500 + excess_DCOILWTICO,
+                          data = final_dataset,
+                          x=TRUE
+                          )
+names(exxon_mobil_plus_oil)
+dim(exxon_mobil_plus_oil$x)
+head(exxon_mobil_plus_oil$x)
+
+```
+
+We now compute the leverage (and other influence measures) with the function `influence.measures()` and display the scatter plot of the independent variables, highlighting the high-leverage cases.
+
+```{r}
+exxon_mobil_plus_oil.inflm<-influence.measures(exxon_mobil_plus_oil)
+index.inf.hat<-which(exxon_mobil_plus_oil.inflm$is.inf[,"hat"]==TRUE)
+
+par(mfcol=c(1,1))
+
+plot(exxon_mobil_plus_oil$x[,2],
+     exxon_mobil_plus_oil$x[,3],
+     xlab="excess_SP500",
+     ylab="excess_DCOILWTICO"
+     )
+title_graph <- paste0(
+  "Scatter Plot of Independent Variables \n",
+  " High Leverage Points shown in red"
+  )
+title(main=title_graph)
+
+points(exxon_mobil_plus_oil$x[index.inf.hat,2],
+       exxon_mobil_plus_oil$x[index.inf.hat,3],
+       col=2,
+       pch="o")
+```
+
+
